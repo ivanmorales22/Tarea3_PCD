@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.dialects.postgresql import ARRAY as list
+from sqlalchemy.types import JSON
 from database import Base
 
 # ---- Modelos ----
@@ -10,5 +10,5 @@ class User(Base):
     user_id = Column(Integer, primary_key=True, index=True)
     user_email = Column(String)
     age = Column(Integer, nullable=True)
-    recommendations = Column(list(String))
+    recommendations = Column(JSON)
     zip = Column(Integer, nullable=True)
