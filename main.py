@@ -35,13 +35,16 @@ async def get_api_key(api_key: str = Security(api_key_header)) -> str:
     raise HTTPException(status_code=403, detail="Could not validate credentials")
 
 # ---- Esquema Pydantic ---- 
-class Users(BaseModel):
+class User(BaseModel):
     user_name: str = Field(min_length=1, max_length=100)
-    user_id: int = Field(gt=1)
     user_email: str = Field(min_length=1, max_length=100)
     age: int | None = None
-    recommendations: list[str] = Field(min_length=1, max_length=1000)
+    recommendations: list[str] = Field(default_factory=list)
     zip: int | None = None
+
+@app.get("/")
+def root():
+    return {"message": "user api up. see /Docs"}
 
 # ---- Endpoint Protegido ----
 @app.get("/api/v1/secure-data/", tags=["secure"])
@@ -50,10 +53,10 @@ async def secure_data(api_key: str = Depends(get_api_key)):
 
 # ---- Endpoints ----
 @app.post("/api/v1/users/", tags=["users"])
-def create_user(users: Users, db: Session = Depends(get_db), api_key: str = Depends(get_api_key)):
+def create_user(users: User, db: Session = Depends(get_db), api_key: str = Depends(get_api_key)):
     email_already_on_file = db.query(models.User).filter(models.User.user_email == users.user_email).first()
     if email_already_on_file:
-        raise HTTPException(status_code=400, detail="A user with that email already exists")
+        raise HTTPException(status_code=400, detail="That email is already on use")
     db_user = models.User(
         user_name=users.user_name,
         user_id=users.user_id,
@@ -69,7 +72,7 @@ def create_user(users: Users, db: Session = Depends(get_db), api_key: str = Depe
     return db_user
 
 @app.put("/api/v1/users/{user_id}", tags=["users"])
-def update_user(user_id: int, users: Users, db: Session = Depends(get_db), api_key: str = Depends(get_api_key)):
+def update_user(user_id: int, users: User, db: Session = Depends(get_db), api_key: str = Depends(get_api_key)):
     db_user = db.query(models.User).filter(models.User.user == user_id).first()
     if db_user is None:
         raise HTTPException(status_code=404, detail=f"ID {user_id} : Does not exist")
@@ -90,7 +93,7 @@ def list_users(db: Session = Depends(get_db), api_key: str = Depends(get_api_key
     return db.query(models.User).all()
 
 @app.delete("/api/v1/users/{user_id}", tags=["users"])
-def delete_user(user_id: int, users: Users, db: Session = Depends(get_db), api_key: str = Depends(get_api_key)):
+def delete_user(user_id: int, users: User, db: Session = Depends(get_db), api_key: str = Depends(get_api_key)):
     db_user = db.query(models.User).filter(models.User.user == user_id).first()
     if db_user is None:
         raise HTTPException(status_code=404, detail=f"ID {user_id} : Does not exist")
